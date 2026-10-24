@@ -7,7 +7,6 @@ import io
 
 app = FastAPI()
 
-# Autorise ton site web à interroger ce serveur (CORS)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -16,10 +15,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-print("Chargement du modèle rembg (u2net_p)...")
-# On utilise u2net_p (version allégée) pour ne pas saturer la RAM gratuite de Render
-session = new_session("u2net_p")
-print("Modèle chargé ! Le serveur est prêt.")
+# Variable globale pour la session
+session = None
+
+def get_session():
+    global session
+    if session is None:
+        print("Chargement du modèle rembg (u2net_p)...")
+        session = new_session("u2net_p")
+        print("Modèle chargé avec succès !")
+    return session
 
 @app.post("/remove-bg")
 async def remove_bg(file: UploadFile = File(...)):
@@ -27,10 +32,10 @@ async def remove_bg(file: UploadFile = File(...)):
         image_data = await file.read()
         input_image = Image.open(io.BytesIO(image_data))
         
-        # Traitement de suppression du fond
-        output_image = remove(input_image, session=session)
+        # Charge le modèle à la première utilisation si ce n'est pas déjà fait
+        current_session = get_session()
+        output_image = remove(input_image, session=current_session)
         
-        # Préparation de l'image de sortie en PNG
         output_io = io.BytesIO()
         output_image.save(output_io, "PNG")
         output_io.seek(0)
