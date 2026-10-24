@@ -1,3 +1,4 @@
+import os
 from fastapi import FastAPI, File, UploadFile
 from fastapi.responses import Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -15,7 +16,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Variable globale pour la session
 session = None
 
 def get_session():
@@ -32,7 +32,6 @@ async def remove_bg(file: UploadFile = File(...)):
         image_data = await file.read()
         input_image = Image.open(io.BytesIO(image_data))
         
-        # Charge le modèle à la première utilisation si ce n'est pas déjà fait
         current_session = get_session()
         output_image = remove(input_image, session=current_session)
         
@@ -44,3 +43,9 @@ async def remove_bg(file: UploadFile = File(...)):
     
     except Exception as e:
         return {"error": str(e)}, 500
+
+if __name__ == "__main__":
+    import uvicorn
+    # Récupère automatiquement le port attribué par Render (ou 10000 par défaut)
+    port = int(os.environ.get("PORT", 10000))
+    uvicorn.run("server:app", host="0.0.0.0", port=port)
